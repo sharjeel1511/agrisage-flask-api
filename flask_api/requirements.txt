@@ -1,4 +1,5 @@
 flask
 numpy
 pillow
-tensorflow-cpu 
+tensorflow-cpu
+gunicorn 
