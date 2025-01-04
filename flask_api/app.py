@@ -4,8 +4,10 @@ from PIL import Image
 import io
 import tensorflow as tf
 import os
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Define class labels
 class_labels = ['Blight', 'Common Rust', 'Gray Leaf Spot', 'Healthy']
