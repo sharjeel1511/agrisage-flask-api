@@ -4,9 +4,33 @@ import 'login_page.dart';
 import 'signup_page.dart';
 import 'navigation_wrapper.dart';
 import 'profile_page.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    if (kIsWeb) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } else {
+      await Firebase.initializeApp();
+    }
+    print('Firebase initialized successfully');
+
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (user == null) {
+        print('User is signed out');
+      } else {
+        print('User is signed in with email: ${user.email}');
+      }
+    });
+  } catch (e) {
+    print('Firebase initialization error: $e');
+  }
   runApp(const MyApp());
 }
 
