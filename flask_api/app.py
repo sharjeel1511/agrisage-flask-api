@@ -5,6 +5,7 @@ import io
 import tensorflow as tf
 import os
 from flask_cors import CORS
+import cv2
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -30,17 +31,32 @@ except Exception as e:
     print(f"Error loading model: {e}")
 
 def preprocess_image(image):
-    print("Original image size:", image.size)
-    # Resize image to 224x224
-    image = image.resize((224, 224))
-    print("Resized image shape:", image.size)
-    # Convert to array and add batch dimension
-    img_array = np.array(image, dtype=np.float32)
-    img_array = np.expand_dims(img_array, axis=0)
-    # Normalize
-    img_array = img_array / 255.0
-    print("Final array shape:", img_array.shape)
-    return img_array
+    try:
+        # Convert to RGB if needed
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+            
+        # Check for green color presence
+        img_array = np.array(image)
+        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+        green_lower = np.array([25, 40, 40])
+        green_upper = np.array([85, 255, 255])
+        green_mask = cv2.inRange(hsv, green_lower, green_upper)
+        green_ratio = np.sum(green_mask > 0) / (image.size[0] * image.size[1])
+        
+        if green_ratio < 0.15:  # At least 15% should be green
+            raise ValueError("The image doesn't appear to be a maize leaf. Please ensure the image shows a maize leaf clearly.")
+
+        # Resize and normalize for model
+        image = image.resize((224, 224))
+        img_array = np.array(image, dtype=np.float32)
+        img_array = np.expand_dims(img_array, axis=0)
+        img_array = img_array / 255.0
+        
+        return img_array
+
+    except Exception as e:
+        raise ValueError(f"Image preprocessing failed: {str(e)}")
 
 def get_recommendations(disease):
     recommendations = {
@@ -73,36 +89,52 @@ def predict():
         return jsonify({'error': 'No image provided'}), 400
     
     try:
-        # Get and preprocess the image
         image_file = request.files['image']
         image = Image.open(io.BytesIO(image_file.read()))
-        processed_image = preprocess_image(image)
         
-        # Set the tensor to point to the input data to be inferred
+        try:
+            processed_image = preprocess_image(image)
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+            
+        # Run inference
         interpreter.set_tensor(input_details[0]['index'], processed_image)
-        
-        # Run the inference
         interpreter.invoke()
-        
-        # Get prediction results
         prediction = interpreter.get_tensor(output_details[0]['index'])
         
-        # Get predicted class and confidence
-        predicted_class = class_labels[np.argmax(prediction)]
-        confidence = float(np.max(prediction))
+        # Get probabilities for all classes
+        probabilities = prediction[0].tolist()
+        max_confidence = float(np.max(probabilities))
+        predicted_class = class_labels[np.argmax(probabilities)]
         
-        print(f"Predicted class: {predicted_class}")
-        print(f"Confidence: {confidence}")
-        print(f"All probabilities: {prediction}")
+        # Create confidence scores for all classes
+        confidence_scores = {
+            class_label: float(prob) 
+            for class_label, prob in zip(class_labels, probabilities)
+        }
         
-        # Get recommendations for the predicted disease
-        recommendations = get_recommendations(predicted_class)
-        
-        return jsonify({
-            'disease': predicted_class,
-            'confidence': confidence,
-            'recommendations': recommendations
-        })
+        if max_confidence < 0.70:
+            return jsonify({
+                'error': 'Unable to make a confident prediction. Please ensure the image is clear and well-lit.',
+                'confidence_scores': confidence_scores
+            }), 400
+        elif max_confidence < 0.80:
+            # Uncertain case - show all probabilities
+            return jsonify({
+                'status': 'uncertain',
+                'message': 'The prediction is uncertain. Here are the possibilities:',
+                'confidence_scores': confidence_scores,
+                'recommendations': get_recommendations(predicted_class)
+            })
+        else:
+            # Confident prediction
+            return jsonify({
+                'status': 'confident',
+                'disease': predicted_class,
+                'confidence': max_confidence,
+                'confidence_scores': confidence_scores,
+                'recommendations': get_recommendations(predicted_class)
+            })
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500

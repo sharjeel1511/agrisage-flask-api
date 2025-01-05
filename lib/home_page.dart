@@ -9,6 +9,12 @@ import 'treatment_page.dart';
 import 'guide_page.dart';
 import 'chat_bubble.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'models/scan_history_model.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -63,8 +69,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Future<void> _pickImage(BuildContext context, ImageSource source) async {
     try {
-      if (!mounted) return;
-
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(
         source: source,
@@ -73,19 +77,235 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         imageQuality: 85,
       );
 
-      if (pickedFile != null && mounted) {
-        await Future.delayed(const Duration(milliseconds: 100));
-        if (!mounted) return;
-
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => ResultPage(imagePath: pickedFile.path),
-          ),
+      if (pickedFile != null) {
+        // Show a more informative loading dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Processing Image...',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Please wait while our server initializes',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
+
+        try {
+          // First, check if server is responsive
+          bool serverReady = false;
+          int retryCount = 0;
+          const maxRetries = 3;
+
+          while (!serverReady && retryCount < maxRetries) {
+            try {
+              final response = await http.get(
+                Uri.parse('https://agrisage-flask-api.onrender.com/predict'),
+              );
+              if (response.statusCode == 405) {
+                // Method not allowed means server is up
+                serverReady = true;
+              }
+            } catch (e) {
+              retryCount++;
+              if (retryCount < maxRetries) {
+                await Future.delayed(const Duration(seconds: 5));
+              }
+            }
+          }
+
+          if (!serverReady) {
+            Navigator.pop(context); // Close loading dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                    'Server is still initializing. Please try again in a moment.'),
+                duration: Duration(seconds: 4),
+              ),
+            );
+            return;
+          }
+
+          // Proceed with image upload
+          var uri =
+              Uri.parse('https://agrisage-flask-api.onrender.com/predict');
+          var request = http.MultipartRequest('POST', uri);
+
+          // Add CORS headers for web
+          request.headers.addAll({
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          });
+
+          if (kIsWeb) {
+            final bytes = await pickedFile.readAsBytes();
+            request.files.add(
+              http.MultipartFile.fromBytes(
+                'image',
+                bytes,
+                filename: 'image.jpg',
+              ),
+            );
+          } else {
+            request.files.add(
+              await http.MultipartFile.fromPath('image', pickedFile.path),
+            );
+          }
+
+          var response = await request.send();
+          var responseData = await response.stream.bytesToString();
+          print('Response: $responseData');
+
+          Navigator.pop(context); // Close loading dialog
+          if (!mounted) return;
+
+          final result = json.decode(responseData);
+
+          String displayPath;
+          if (kIsWeb) {
+            final bytes = await pickedFile.readAsBytes();
+            displayPath = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+          } else {
+            displayPath = pickedFile.path;
+          }
+
+          if (response.statusCode == 400) {
+            // Show error or uncertain prediction dialog
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text(
+                  result['error'] != null ? 'Error' : 'Uncertain Prediction',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF2C3E50),
+                  ),
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      result['error'] != null
+                          ? Icons.error_outline
+                          : Icons.warning_amber,
+                      color:
+                          result['error'] != null ? Colors.red : Colors.orange,
+                      size: 48,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      result['error'] ?? result['message'],
+                      style: GoogleFonts.inter(color: const Color(0xFF2C3E50)),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (result['confidence_scores'] != null) ...[
+                      const SizedBox(height: 16),
+                      ...result['confidence_scores'].entries.map((entry) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(entry.key),
+                              Text(
+                                  '${(entry.value * 100).toStringAsFixed(1)}%'),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'OK',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF2ECC71),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+            return;
+          }
+
+          // Navigate to result page for both uncertain and confident predictions
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ResultPage(
+                imagePath: displayPath,
+                prediction: result,
+              ),
+            ),
+          );
+
+          if (result != null) {
+            final scanHistory = ScanHistory(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              title: 'Maize Scan',
+              scanDate: DateTime.now(),
+              diagnosis: result['class'] ?? 'Unknown',
+              confidence: '${(result['confidence'] * 100).toStringAsFixed(1)}%',
+              imagePath: displayPath,
+            );
+
+            // Save to Firebase Firestore
+            try {
+              final user = FirebaseAuth.instance.currentUser;
+              print('Saving scan for user: ${user?.uid}');
+
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user?.uid)
+                  .collection('scans')
+                  .doc(scanHistory.id)
+                  .set(scanHistory.toMap());
+
+              print('Scan saved successfully');
+            } catch (e) {
+              print('Error saving scan history: $e');
+            }
+          }
+        } catch (e) {
+          print('Error processing image: $e');
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString().contains('XMLHttpRequest')
+                  ? 'Server is warming up. Please try again in a moment.'
+                  : 'Error: $e'),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
       }
     } catch (e) {
       print('Error picking image: $e');
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
