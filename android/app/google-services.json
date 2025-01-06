@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "618436312170",
+    "project_id": "agrisagedatabase",
+    "storage_bucket": "agrisagedatabase.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:618436312170:android:106940165ffffd12e9de13",
+        "android_client_info": {
+          "package_name": "com.example.my_fyp_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "618436312170-jkn5665rqpi18h02va6tapvf2tueke6o.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.my_fyp_app",
+            "certificate_hash": "879ec870e4bada928d854c548f0672bc4d14a5cb"
+          }
+        },
+        {
+          "client_id": "618436312170-ti69aujivdkgda2firaqqbndgocc9v12.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxD0pa0PT5nI3YXFm_6q6H13R-5Xi5oG4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "618436312170-ti69aujivdkgda2firaqqbndgocc9v12.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "618436312170-lp5rth09ugrudnt2cfhqp4p252ao8j0j.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.myFypApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

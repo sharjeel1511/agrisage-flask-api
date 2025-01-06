@@ -1,0 +1,24 @@
+{
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "agrisagedatabase",
+                    "appId": "1:618436312170:android:106940165ffffd12e9de13",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "agrisagedatabase",
+                    "configurations": {
+                        "android": "1:618436312170:android:106940165ffffd12e9de13",
+                        "ios": "1:618436312170:ios:16c99d8460bae609e9de13",
+                        "web": "1:618436312170:web:c05506f595b34c5de9de13",
+                        "windows": "1:618436312170:web:059cdcd904c5f988e9de13"
+                    }
+                }
+            }
+        }
+    }
+}

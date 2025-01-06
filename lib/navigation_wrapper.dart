@@ -21,6 +21,7 @@ class _NavigationWrapperState extends State<NavigationWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    print('Building NavigationWrapper');
     return Scaffold(
       body: _pages[_selectedIndex],
       bottomNavigationBar: Container(

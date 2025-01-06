@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'services/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -11,8 +13,9 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isPasswordVisible = false;
+  final _authService = AuthService();
   bool _isLoading = false;
+  bool _isPasswordVisible = false;
 
   @override
   void dispose() {
@@ -21,16 +24,47 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
+  Future<void> _signIn() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
+      try {
+        print('Attempting to sign in...');
+        await _authService.signInWithEmailAndPassword(
+          _emailController.text.trim(),
+          _passwordController.text.trim(),
+        );
 
-      // Simulate network delay
-      await Future.delayed(const Duration(seconds: 2));
+        // Check if user is actually logged in
+        final user = FirebaseAuth.instance.currentUser;
+        print('Current user: ${user?.email}');
 
-      if (mounted) {
-        setState(() => _isLoading = false);
-        Navigator.pushReplacementNamed(context, '/home');
+        if (mounted) {
+          print('Attempting navigation...');
+          // Try direct navigation first
+          await Navigator.of(context).pushReplacementNamed('/home');
+          print('Navigation completed');
+        }
+      } on FirebaseAuthException catch (e) {
+        print('Sign in error: ${e.message}');
+        String message = 'An error occurred';
+        if (e.code == 'user-not-found') {
+          message = 'No user found with this email';
+        } else if (e.code == 'wrong-password') {
+          message = 'Wrong password provided';
+        } else if (e.code == 'invalid-email') {
+          message = 'Invalid email address';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } catch (e) {
+        print('Unexpected error: $e');
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
       }
     }
   }
@@ -163,7 +197,7 @@ class _LoginPageState extends State<LoginPage> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleLogin,
+                    onPressed: _isLoading ? null : _signIn,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2ECC71),
                       foregroundColor: Colors.white,

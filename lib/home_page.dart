@@ -265,30 +265,44 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           );
 
           if (result != null) {
-            final scanHistory = ScanHistory(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-              title: 'Maize Scan',
-              scanDate: DateTime.now(),
-              diagnosis: result['class'] ?? 'Unknown',
-              confidence: '${(result['confidence'] * 100).toStringAsFixed(1)}%',
-              imagePath: displayPath,
-            );
+            final user = FirebaseAuth.instance.currentUser;
+            if (user != null) {
+              try {
+                final scanHistory = ScanHistory(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  title: 'Maize Scan',
+                  scanDate: DateTime.now(),
+                  diagnosis: result['disease'] ?? 'Unknown',
+                  confidence:
+                      '${(result['confidence'] * 100).toStringAsFixed(1)}%',
+                  imagePath: displayPath,
+                );
 
-            // Save to Firebase Firestore
-            try {
-              final user = FirebaseAuth.instance.currentUser;
-              print('Saving scan for user: ${user?.uid}');
+                // Get reference to scans collection
+                final scansRef = FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(user.uid)
+                    .collection('scans');
 
-              await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(user?.uid)
-                  .collection('scans')
-                  .doc(scanHistory.id)
-                  .set(scanHistory.toMap());
+                // Get current scans count
+                final scansSnapshot =
+                    await scansRef.orderBy('scanDate', descending: true).get();
 
-              print('Scan saved successfully');
-            } catch (e) {
-              print('Error saving scan history: $e');
+                // If more than 9 scans exist, delete the oldest ones
+                if (scansSnapshot.docs.length >= 9) {
+                  final toDelete = scansSnapshot.docs
+                      .sublist(8); // Keep newest 9, making room for new scan
+                  for (var doc in toDelete) {
+                    await doc.reference.delete();
+                  }
+                }
+
+                // Add new scan
+                await scansRef.doc(scanHistory.id).set(scanHistory.toMap());
+                print('Scan saved successfully');
+              } catch (e) {
+                print('Error saving scan history: $e');
+              }
             }
           }
         } catch (e) {
