@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_fyp_app/main.dart';
 
 class ChatBubble extends StatefulWidget {
   const ChatBubble({Key? key}) : super(key: key);
@@ -11,6 +12,8 @@ class _ChatBubbleState extends State<ChatBubble>
     with SingleTickerProviderStateMixin {
   late AnimationController _blinkController;
   late Animation<double> _blinkAnimation;
+  final TextEditingController _messageController = TextEditingController();
+  final List<Map<String, String>> _messages = [];
 
   @override
   void initState() {
@@ -113,7 +116,7 @@ class _ChatInterfaceState extends State<ChatInterface> {
     _focusNode.requestFocus();
   }
 
-  void _handleSubmitted(String text) {
+  void _handleSubmitted(String text) async {
     if (text.isEmpty) return;
 
     setState(() {
@@ -121,17 +124,24 @@ class _ChatInterfaceState extends State<ChatInterface> {
       _controller.clear();
     });
 
-    // Simulate bot response after a delay
-    Future.delayed(const Duration(seconds: 1), () {
+    try {
+      final response = await chatbotService.sendMessage(text);
       if (!mounted) return;
       setState(() {
-        _messages.add(const ChatMessage(
-          text:
-              "This is a dummy response. The AI integration will be added later.",
+        _messages.add(ChatMessage(
+          text: response,
           isUser: false,
         ));
       });
-    });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(const ChatMessage(
+          text: "Sorry, I encountered an error. Please try again.",
+          isUser: false,
+        ));
+      });
+    }
   }
 
   @override

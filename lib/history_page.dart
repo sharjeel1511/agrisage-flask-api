@@ -77,7 +77,7 @@ class HistoryPage extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => ResultPage(
+                  builder: (_) => ResultPage(   
                     imagePath: imageUrl ?? '',
                     prediction: predictionData,
                   ),

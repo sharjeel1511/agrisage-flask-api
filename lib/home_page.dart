@@ -15,6 +15,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'models/scan_history_model.dart';
+import 'package:flutter_carousel_widget/flutter_carousel_widget.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -42,6 +43,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   ];
 
   final Color myColor = const Color(0xFF2C3E50);
+
+  final List<Map<String, String>> carouselItems = [
+    {
+      'image': 'assets/images/maize1.jpg',
+      'text': 'Healthy Maize Growth Tips',
+    },
+    {
+      'image': 'assets/images/maize2.jpg',
+      'text': 'Disease Prevention Guide',
+    },
+    {
+      'image': 'assets/images/maize3.jpg',
+      'text': 'Optimal Nutrition Guide',
+    },
+    {
+      'image': 'assets/images/maize4.jpg',
+      'text': 'Best Farming Practices',
+    },
+    {
+      'image': 'assets/images/maize5.jpg',
+      'text': 'Yield Improvement Tips',
+    },
+  ];
 
   @override
   void initState() {
@@ -603,6 +627,102 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildImageCarousel() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Text(
+            'Maize Care Guide',
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF2C3E50),
+            ),
+          ),
+        ),
+        FlutterCarousel(
+          options: CarouselOptions(
+            height: 300,
+            viewportFraction: 0.85,
+            initialPage: 0,
+            enableInfiniteScroll: true,
+            reverse: false,
+            autoPlay: true,
+            autoPlayInterval: const Duration(seconds: 3),
+            autoPlayAnimationDuration: const Duration(milliseconds: 800),
+            autoPlayCurve: Curves.fastOutSlowIn,
+            enlargeCenterPage: true,
+            scrollDirection: Axis.horizontal,
+          ),
+          items: carouselItems.map((item) {
+            return Builder(
+              builder: (BuildContext context) {
+                return Container(
+                  height: 300,
+                  width: MediaQuery.of(context).size.width,
+                  margin: const EdgeInsets.symmetric(horizontal: 5.0),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(15),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.asset(
+                          item['image']!,
+                          fit: BoxFit.cover,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                                colors: [
+                                  Colors.black.withOpacity(0.8),
+                                  Colors.transparent,
+                                ],
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                              horizontal: 20,
+                            ),
+                            child: Text(
+                              item['text']!,
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -658,68 +778,100 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
                 _buildScanPlantContainer(),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.1,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildCategoryCard(
-                          'Maize Diseases', Icons.coronavirus_outlined, 0),
-                      _buildCategoryCard(
-                          'Maize Nutrients', Icons.water_drop_outlined, 1),
-                      _buildCategoryCard(
-                          'Treatment', Icons.healing_outlined, 2),
-                      _buildCategoryCard(
-                          'Maize Guide', Icons.menu_book_outlined, 3),
+                      _buildCompactCategory(
+                        'Diseases',
+                        Icons.coronavirus_outlined,
+                        0,
+                        () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const DiseasesPage())),
+                      ),
+                      _buildCompactCategory(
+                        'Nutrients',
+                        Icons.water_drop_outlined,
+                        1,
+                        () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const NutrientsPage())),
+                      ),
+                      _buildCompactCategory(
+                        'Treatment',
+                        Icons.healing_outlined,
+                        2,
+                        () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const TreatmentPage())),
+                      ),
+                      _buildCompactCategory(
+                        'Guide',
+                        Icons.menu_book_outlined,
+                        3,
+                        () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const GuidePage())),
+                      ),
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Text(
-                    'Previous Scans',
-                    style: GoogleFonts.inter(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: myColor,
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    children: [
-                      _buildPreviousScanItem(
-                        'Maize Leaf Sample',
-                        'Today, 2:30 PM',
-                        'assets/images/placeholder1.png',
-                      ),
-                      const SizedBox(height: 12),
-                      _buildPreviousScanItem(
-                        'Corn Disease Check',
-                        'Yesterday, 4:15 PM',
-                        'assets/images/placeholder2.png',
-                      ),
-                      const SizedBox(height: 12),
-                      _buildPreviousScanItem(
-                        'Plant Analysis',
-                        'Mar 15, 10:00 AM',
-                        'assets/images/placeholder3.png',
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                ),
+                _buildImageCarousel(),
               ],
             ),
           ),
         ),
       ),
       floatingActionButton: const ChatBubble(),
+    );
+  }
+
+  Widget _buildCompactCategory(
+      String title, IconData icon, int index, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: categoryColors[index],
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: glowColors[index].withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              color: glowColors[index],
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF2C3E50),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

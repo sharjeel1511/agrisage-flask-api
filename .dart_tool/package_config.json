@@ -182,6 +182,12 @@
       "languageVersion": "3.3"
     },
     {
+      "name": "flutter_carousel_widget",
+      "rootUri": "file:///C:/Users/Asif%20computer/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_carousel_widget-2.3.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.18"
+    },
+    {
       "name": "flutter_lints",
       "rootUri": "file:///C:/Users/Asif%20computer/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_lints-2.0.3",
       "packageUri": "lib/",
@@ -536,7 +542,7 @@
       "languageVersion": "3.0"
     }
   ],
-  "generated": "2025-01-05T08:42:22.897845Z",
+  "generated": "2025-01-13T17:25:39.715172Z",
   "generator": "pub",
   "generatorVersion": "3.6.0",
   "flutterRoot": "file:///C:/flutter/src/flutter",
