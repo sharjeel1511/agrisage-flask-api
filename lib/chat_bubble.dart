@@ -12,8 +12,6 @@ class _ChatBubbleState extends State<ChatBubble>
     with SingleTickerProviderStateMixin {
   late AnimationController _blinkController;
   late Animation<double> _blinkAnimation;
-  final TextEditingController _messageController = TextEditingController();
-  final List<Map<String, String>> _messages = [];
 
   @override
   void initState() {
